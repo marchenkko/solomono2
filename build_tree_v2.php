@@ -20,23 +20,26 @@ function getCategories($pdo)
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// Функція для побудови дерева категорій
-function buildTree(array $categories, $parentId = 0)
+// Функція для побудови дерева категорій ітеративним способом
+function buildTree(array $categories): array
 {
-    $branch = array();
+    $tree = [];
+    $references = [];
 
     foreach ($categories as $category) {
-        if ($category['parent_id'] == $parentId) {
-            $children = buildTree($categories, $category['categories_id']);
-            if ($children) {
-                $branch[$category['categories_id']] = $children;
-            } else {
-                $branch[$category['categories_id']] = $category['categories_id'];
-            }
+        $references[$category['categories_id']] = $category;
+        $references[$category['categories_id']]['children'] = array();
+    }
+
+    foreach ($references as $categoryId => $category) {
+        if ($category['parent_id'] == 0) {
+            $tree[$categoryId] = &$references[$categoryId];
+        } else {
+            $references[$category['parent_id']]['children'][$categoryId] = &$references[$categoryId];
         }
     }
 
-    return $branch;
+    return $tree;
 }
 
 // Отримання всіх категорій з бази даних
@@ -51,6 +54,7 @@ $tree = buildTree($categories);
 echo '<pre>';
 print_r($tree);
 echo '</pre>';
+
 echo 'Час виконання скрипту: ' . round(microtime(true) - $start, 4) . ' сек.';
 
-//php build_tree.php - для запуску скрипта
+// php build_tree_v2.php - для запуску скрипта
