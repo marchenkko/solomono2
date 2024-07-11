@@ -20,22 +20,41 @@ function getCategories($pdo)
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// Функція для побудови дерева категорій ітеративним способом
+// Функція для побудови дерева категорій
 function buildTree(array $categories): array
 {
     $tree = [];
     $references = [];
 
     foreach ($categories as $category) {
-        $references[$category['categories_id']] = $category;
-        $references[$category['categories_id']]['children'] = array();
+        $categoryId = $category['categories_id'];
+        $parentId = $category['parent_id'];
+
+        if ($parentId == 0) {
+            if (!isset($tree[$categoryId])) {
+                $tree[$categoryId] = $categoryId;
+            }
+        } else {
+            if (!isset($references[$parentId])) {
+                $references[$parentId] = [];
+            }
+            if (!is_array($references[$parentId])) {
+                $references[$parentId] = [$references[$parentId]];
+            }
+            $references[$parentId][$categoryId] = $categoryId;
+        }
     }
 
-    foreach ($references as $categoryId => $category) {
-        if ($category['parent_id'] == 0) {
-            $tree[$categoryId] = &$references[$categoryId];
+    foreach ($references as $parentId => $children) {
+        if (isset($tree[$parentId])) {
+            $tree[$parentId] = $children;
         } else {
-            $references[$category['parent_id']]['children'][$categoryId] = &$references[$categoryId];
+            foreach ($tree as &$node) {
+                if (is_array($node) && isset($node[$parentId])) {
+                    $node[$parentId] = $children;
+                    break;
+                }
+            }
         }
     }
 
